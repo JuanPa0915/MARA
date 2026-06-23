@@ -1,0 +1,118 @@
+/* ─── Tailwind Core Directives ──────────────────────────────────────────────
+   Order matters: base → components → utilities.
+   Do NOT move @tailwind utilities above @tailwind components or Tailwind's
+   own component overrides will lose the cascade battle.                      */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Base Resets ───────────────────────────────────────────────────────────
+   Minimal resets on top of Tailwind Preflight; scoped to MARA's needs.      */
+@layer base {
+  html {
+    /* Prevent horizontal scroll from any overflowing elements */
+    overflow-x: hidden;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    /* Map to Tailwind's custom token: warm cream #fff8f3 */
+    @apply bg-background text-on-surface font-body-md overflow-x-hidden;
+  }
+
+  /* Material Symbols variable-font axis settings */
+  .material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+    /* Prevent icon ligatures from affecting layout flow */
+    line-height: 1;
+    vertical-align: middle;
+    user-select: none;
+  }
+}
+
+/* ─── Reusable Component Classes ────────────────────────────────────────────
+   Defined here (not inline JSX) so they can be shared across components
+   and overridden cleanly by utilities when needed.                           */
+@layer components {
+
+  /* Primary CTA button — outlined style with fill-on-hover */
+  .btn-primary {
+    @apply border border-primary px-8 py-3
+           font-label-lg text-label-lg
+           uppercase tracking-widest
+           transition-all duration-500 ease-in-out
+           hover:bg-primary hover:text-white;
+  }
+
+  /* ── Product card hover overlay ─────────────────────────────────────────
+     Opacity is intentionally NOT handled via Tailwind `group-hover:opacity-100`
+     so that the transition timing (0.4 s ease) is fully controlled here and
+     not coupled to Tailwind's transitionProperty: opacity default (150 ms).  */
+  .product-card-overlay {
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+
+  .product-card:hover .product-card-overlay {
+    opacity: 1;
+  }
+
+  /* ── Architectural divider ──────────────────────────────────────────────
+     A 1 px hairline that spans the full column minus 40 px on each side.
+     Uses theme() to pull the exact `primary` hex so it matches the color
+     system even if the token is later updated in tailwind.config.js.        */
+  .elegant-divider {
+    height: 1px;
+    background-color: theme('colors.primary');
+    opacity: 0.15;
+    width: calc(100% - 80px);
+    margin-left: 40px;
+    margin-right: 40px;
+  }
+
+  /* ── Hero CTA link — white outlined, primary-fill on hover ─────────────  */
+  .btn-hero {
+    @apply inline-block border border-white text-white
+           px-10 py-4
+           font-label-lg text-label-lg
+           uppercase tracking-widest
+           hover:bg-white hover:text-primary
+           transition-all duration-500;
+  }
+
+  /* ── Nav link — base state ──────────────────────────────────────────────  */
+  .nav-link {
+    @apply font-label-lg text-label-lg uppercase tracking-widest
+           text-on-surface-variant
+           hover:text-primary transition-colors duration-300;
+  }
+
+  /* ── Nav link — active / current page ──────────────────────────────────  */
+  .nav-link-active {
+    @apply font-label-lg text-label-lg uppercase tracking-widest
+           text-primary border-b border-primary/20 pb-1;
+  }
+
+  /* ── Footer link ────────────────────────────────────────────────────────  */
+  .footer-link {
+    @apply font-body-md text-body-md font-light
+           text-on-surface-variant
+           hover:text-primary transition-colors;
+  }
+}
+
+/* ─── Reduced Motion ─────────────────────────────────────────────────────────
+   Respect the user's OS-level preference. Kills all CSS transitions and
+   animations — Tailwind's built-in `motion-safe:` variant handles the JSX
+   side; this covers any raw CSS transitions defined above.                   */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
