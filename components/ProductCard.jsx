@@ -29,7 +29,7 @@ const ProductCard = ({ name, price, imageUrl, alt, onClick }) => (
     aria-label={`Ver detalles de ${name} — ${price}`}
   >
     {/* ── Image container ── */}
-    <div className="aspect-[4/5] bg-surface-container-low mb-6 relative overflow-hidden">
+    <div className="aspect-[4/5] bg-secondary-fixed mb-6 relative overflow-hidden">
       <img
         src={imageUrl}
         alt={alt}
