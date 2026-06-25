@@ -1,5 +1,20 @@
+import { useState } from 'react';
+
 const ProductDetail = ({ product, onBack, onAddToCart, onGoToCheckout }) => {
-  const numericPrice = parseInt(product.price.replace(/[$,]/g, ''));
+  const [addedFeedback, setAddedFeedback] = useState(false);
+  const numericPrice = Number(product.price.replace(/[^0-9]/g, ''));
+  const cartItem = { id: product.id, name: product.name, price: numericPrice, imageUrl: product.imageUrl };
+
+  const handleAddToCart = () => {
+    onAddToCart(cartItem);
+    setAddedFeedback(true);
+    setTimeout(() => setAddedFeedback(false), 1500);
+  };
+
+  const handleBuy = () => {
+    onAddToCart(cartItem);
+    onGoToCheckout();
+  };
 
   return (
     <main className="min-h-screen pt-[80px]">
@@ -41,19 +56,20 @@ const ProductDetail = ({ product, onBack, onAddToCart, onGoToCheckout }) => {
               mexicanos con técnicas tradicionales transmitidas por generaciones.
             </p>
 
-            <button
-              onClick={() => {
-                onAddToCart({
-                  name: product.name,
-                  price: numericPrice,
-                  imageUrl: product.imageUrl,
-                });
-                setTimeout(() => onGoToCheckout(), 0);
-              }}
-              className="btn-primary w-full text-center"
-            >
-              Comprar
-            </button>
+            <div className="flex gap-4">
+              <button
+                onClick={handleAddToCart}
+                className="flex-1 border border-primary/40 px-8 py-3 font-label-lg text-label-lg uppercase tracking-widest transition-all duration-500 ease-in-out hover:border-primary text-center"
+              >
+                {addedFeedback ? '✓ Agregado' : 'Agregar al carrito'}
+              </button>
+              <button
+                onClick={handleBuy}
+                className="flex-1 btn-primary text-center"
+              >
+                Comprar
+              </button>
+            </div>
           </div>
         </div>
       </div>

@@ -15,7 +15,7 @@ const INITIAL_FORM = {
   indicaciones: '',
 };
 
-const Checkout = ({ cartItems, total, onBack, onSubmit }) => {
+const Checkout = ({ cartItems, total, processing, onBack, onSubmit }) => {
   const [form, setForm] = useState(INITIAL_FORM);
 
   const handleChange = (e) => {
@@ -39,11 +39,10 @@ const Checkout = ({ cartItems, total, onBack, onSubmit }) => {
         </button>
 
         <div className="flex flex-col lg:flex-row gap-12 lg:gap-20">
-          <form
-            onSubmit={handleSubmit}
-            className="flex-1"
-            noValidate
-          >
+            <form
+              onSubmit={handleSubmit}
+              className="flex-1"
+            >
             <h1 className="font-headline-lg text-headline-lg uppercase mb-10">
               Datos de Envío
             </h1>
@@ -132,12 +131,13 @@ const Checkout = ({ cartItems, total, onBack, onSubmit }) => {
                   <label htmlFor="apartamento" className="font-label-sm text-label-sm uppercase tracking-widest text-on-surface-variant block mb-2">
                     Apartamento, torre, oficina
                   </label>
-                  <input
-                    id="apartamento"
-                    name="apartamento"
-                    type="text"
-                    value={form.apartamento}
-                    onChange={handleChange}
+                    <input
+                      id="apartamento"
+                      name="apartamento"
+                      type="text"
+                      required
+                      value={form.apartamento}
+                      onChange={handleChange}
                     placeholder="Ej. Torre 2, Apto 501"
                     className="w-full border border-outline-variant/50 px-4 py-3 font-body-md bg-transparent outline-none focus:border-primary transition-colors"
                   />
@@ -195,14 +195,15 @@ const Checkout = ({ cartItems, total, onBack, onSubmit }) => {
 
                 <div>
                   <label htmlFor="codigoPostal" className="font-label-sm text-label-sm uppercase tracking-widest text-on-surface-variant block mb-2">
-                    Código Postal <span className="text-on-surface-variant/50 font-normal normal-case">(opcional)</span>
+                    Código Postal <span className="text-error">*</span>
                   </label>
-                  <input
-                    id="codigoPostal"
-                    name="codigoPostal"
-                    type="text"
-                    value={form.codigoPostal}
-                    onChange={handleChange}
+                    <input
+                      id="codigoPostal"
+                      name="codigoPostal"
+                      type="text"
+                      required
+                      value={form.codigoPostal}
+                      onChange={handleChange}
                     placeholder="Ej. 050021"
                     className="w-full border border-outline-variant/50 px-4 py-3 font-body-md bg-transparent outline-none focus:border-primary transition-colors max-w-xs"
                   />
@@ -212,12 +213,13 @@ const Checkout = ({ cartItems, total, onBack, onSubmit }) => {
                   <label htmlFor="indicaciones" className="font-label-sm text-label-sm uppercase tracking-widest text-on-surface-variant block mb-2">
                     Indicaciones adicionales
                   </label>
-                  <textarea
-                    id="indicaciones"
-                    name="indicaciones"
-                    rows={2}
-                    value={form.indicaciones}
-                    onChange={handleChange}
+                    <textarea
+                      id="indicaciones"
+                      name="indicaciones"
+                      rows={2}
+                      required
+                      value={form.indicaciones}
+                      onChange={handleChange}
                     placeholder="Ej. Frente al parque principal — Portería de la torre 2"
                     className="w-full border border-outline-variant/50 px-4 py-3 font-body-md bg-transparent outline-none focus:border-primary transition-colors resize-none"
                   />
@@ -235,11 +237,12 @@ const Checkout = ({ cartItems, total, onBack, onSubmit }) => {
                   <label htmlFor="tipoDocumento" className="font-label-sm text-label-sm uppercase tracking-widest text-on-surface-variant block mb-2">
                     Tipo
                   </label>
-                  <select
-                    id="tipoDocumento"
-                    name="tipoDocumento"
-                    value={form.tipoDocumento}
-                    onChange={handleChange}
+                    <select
+                      id="tipoDocumento"
+                      name="tipoDocumento"
+                      required
+                      value={form.tipoDocumento}
+                      onChange={handleChange}
                     className="w-full border border-outline-variant/50 px-4 py-3 font-body-md bg-transparent outline-none focus:border-primary transition-colors"
                   >
                     <option value="CC">Cédula de Ciudadanía</option>
@@ -267,8 +270,8 @@ const Checkout = ({ cartItems, total, onBack, onSubmit }) => {
               </div>
             </section>
 
-            <button type="submit" className="btn-primary w-full md:w-auto text-center">
-              Confirmar Pedido
+            <button type="submit" disabled={processing} className="btn-primary w-full md:w-auto text-center disabled:opacity-40 disabled:pointer-events-none">
+              {processing ? 'Procesando pago…' : 'Confirmar Pedido'}
             </button>
           </form>
 
@@ -291,7 +294,7 @@ const Checkout = ({ cartItems, total, onBack, onSubmit }) => {
                         {item.name}
                       </p>
                       <p className="font-body-md text-on-surface-variant">
-                        ${item.price.toLocaleString()}
+                        {item.price.toLocaleString('es-CO')}
                       </p>
                     </div>
                   </li>
@@ -301,7 +304,7 @@ const Checkout = ({ cartItems, total, onBack, onSubmit }) => {
               <div className="flex justify-between items-center pt-4 border-t border-outline-variant/30">
                 <span className="font-label-lg text-label-lg uppercase">Total</span>
                 <span className="font-headline-md text-headline-md">
-                  ${total.toLocaleString()}
+                  {total.toLocaleString('es-CO')}
                 </span>
               </div>
             </div>

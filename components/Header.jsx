@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 
-const Header = ({ cartCount, cartItems, onRemoveFromCart, onClearCart, searchQuery, onSearchChange, onGoToCheckout }) => {
+const Header = ({ cartCount, cartItems, onRemoveFromCart, onClearCart, searchQuery, onSearchChange, onGoToStore, onGoToCheckout }) => {
   const [scrolled, setScrolled] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
@@ -42,7 +42,12 @@ const Header = ({ cartCount, cartItems, onRemoveFromCart, onClearCart, searchQue
         aria-label="Navegación principal"
       >
         <div className="hidden sm:flex gap-8">
-          <a href="#collection" className="nav-link-active">Tienda</a>
+          <button
+            onClick={() => { onGoToStore(); document.getElementById('collection')?.scrollIntoView({ behavior: 'smooth' }); }}
+            className="nav-link-active"
+          >
+            Tienda
+          </button>
         </div>
 
         <a
@@ -135,7 +140,7 @@ const Header = ({ cartCount, cartItems, onRemoveFromCart, onClearCart, searchQue
                     />
                     <div className="flex-1">
                       <h3 className="font-label-lg text-label-lg uppercase mb-1">{item.name}</h3>
-                      <p className="font-body-md text-on-surface-variant">${item.price.toLocaleString()}</p>
+                      <p className="font-body-md text-on-surface-variant">{item.price.toLocaleString('es-CO')}</p>
                       <button
                         onClick={() => onRemoveFromCart(index)}
                         className="font-label-sm text-label-sm uppercase tracking-widest text-error/70 hover:text-error mt-2 transition-colors"
@@ -152,7 +157,7 @@ const Header = ({ cartCount, cartItems, onRemoveFromCart, onClearCart, searchQue
           <div className="px-6 py-6 border-t border-gray-100">
             <div className="flex justify-between mb-4">
               <span className="font-label-lg text-label-lg uppercase">Total</span>
-              <span className="font-headline-md text-headline-md">${total.toLocaleString()}</span>
+              <span className="font-headline-md text-headline-md">{total.toLocaleString('es-CO')}</span>
             </div>
             <button
               className="btn-primary w-full text-center block"

@@ -34,7 +34,7 @@ const ProductGrid = ({ searchQuery = '', onViewProduct }) => {
           name: item.nombre,
           modelo: item.modelo,
           color: item.color,
-          price: `$${Number(item.precio).toLocaleString()}`,
+          price: Number(item.precio).toLocaleString('es-CO'),
           stock: item.stock,
           descripcion: item.descripcion,
           detalles: item.detalles,
