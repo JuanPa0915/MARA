@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { calculateCartTotal, sanitizeText } from '../src/lib/security';
 
 const Header = ({ cartCount, cartItems, onRemoveFromCart, onClearCart, searchQuery, onSearchChange, onGoToStore, onGoToCheckout }) => {
   const [scrolled, setScrolled] = useState(false);
@@ -29,7 +30,7 @@ const Header = ({ cartCount, cartItems, onRemoveFromCart, onClearCart, searchQue
     return () => window.removeEventListener('keydown', closeOnEscape);
   }, []);
 
-  const total = cartItems.reduce((sum, item) => sum + item.price, 0);
+  const total = calculateCartTotal(cartItems);
 
   return (
     <header
@@ -96,7 +97,7 @@ const Header = ({ cartCount, cartItems, onRemoveFromCart, onClearCart, searchQue
             ref={searchInputRef}
             type="text"
             value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
+            onChange={(e) => onSearchChange(sanitizeText(e.target.value, 80))}
             placeholder="Buscar productos…"
             className="flex-1 bg-transparent border-none outline-none font-body-md text-on-surface placeholder:text-on-surface-variant/40"
           />

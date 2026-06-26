@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { sanitizeCheckoutField } from '../src/lib/security';
 
 const Newsletter = () => {
   const [email,     setEmail]     = useState('');
@@ -6,13 +7,13 @@ const Newsletter = () => {
   const [error,     setError]     = useState('');
 
   const handleSubscribe = () => {
-    const isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    const safeEmail = sanitizeCheckoutField('email', email).trim();
+    const isValid = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(safeEmail);
     if (!isValid) {
       setError('Por favor ingresa un email válido.');
       return;
     }
 
-    console.log('Suscribiendo:', email);
     setSubmitted(true);
     setEmail('');
     setError('');
@@ -54,7 +55,7 @@ const Newsletter = () => {
               id="newsletter-email"
               type="email"
               value={email}
-              onChange={(e) => { setEmail(e.target.value); setError(''); }}
+              onChange={(e) => { setEmail(sanitizeCheckoutField('email', e.target.value)); setError(''); }}
               onKeyDown={handleKeyDown}
               placeholder="TU CORREO ELECTRÓNICO"
               autoComplete="email"

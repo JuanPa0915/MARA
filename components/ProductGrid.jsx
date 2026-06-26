@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import ProductCard from './ProductCard';
 import { supabase } from '../src/lib/supabaseClient';
+import { normalizeProduct } from '../src/lib/security';
 
 const ProductGrid = ({ searchQuery = '', onViewProduct }) => {
   const [products, setProducts] = useState([]);
@@ -17,7 +18,8 @@ const ProductGrid = ({ searchQuery = '', onViewProduct }) => {
       try {
         const { data, error: supabaseError } = await supabase
           .from('productos')
-          .select('*');
+          .select('*')
+          .gt('stock', 0);
 
         if (cancelled) return;
 
@@ -27,25 +29,10 @@ const ProductGrid = ({ searchQuery = '', onViewProduct }) => {
           return;
         }
 
-        console.log("Productos de Supabase:", data);
-
-        const mapped = (data ?? []).map((item) => ({
-          id: item.id,
-          name: item.nombre,
-          modelo: item.modelo,
-          color: item.color,
-          price: Number(item.precio).toLocaleString('es-CO'),
-          stock: item.stock,
-          descripcion: item.descripcion,
-          detalles: item.detalles,
-          imageUrl: item.imagen_url,
-          alt: `${item.nombre} — ${item.modelo}`,
-        }));
-
-        setProducts(mapped);
+        setProducts((data ?? []).map(normalizeProduct));
       } catch (err) {
         if (cancelled) return;
-        setError(err.message || 'Error de conexión con la base de datos');
+        setError(err.message || 'Error de conexion con la base de datos');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -58,8 +45,9 @@ const ProductGrid = ({ searchQuery = '', onViewProduct }) => {
     };
   }, []);
 
+  const safeSearchQuery = String(searchQuery ?? '').toLowerCase();
   const filtered = products.filter((p) =>
-    p.name?.toLowerCase().includes(searchQuery.toLowerCase())
+    p.name?.toLowerCase().includes(safeSearchQuery)
   );
 
   if (loading) {
@@ -91,7 +79,7 @@ const ProductGrid = ({ searchQuery = '', onViewProduct }) => {
   if (products.length === 0) {
     return (
       <section id="collection" className="max-w-[1440px] mx-auto px-5 md:px-[80px] pt-[60px] pb-[120px] scroll-mt-20">
-        <p className="text-center font-body-md text-neutral-500">La base de datos está conectada pero la tabla 'productos' no tiene registros.</p>
+        <p className="text-center font-body-md text-neutral-500">La base de datos esta conectada pero la tabla productos no tiene registros.</p>
       </section>
     );
   }
@@ -99,7 +87,7 @@ const ProductGrid = ({ searchQuery = '', onViewProduct }) => {
   if (filtered.length === 0) {
     return (
       <section id="collection" className="max-w-[1440px] mx-auto px-5 md:px-[80px] pt-[60px] pb-[120px] scroll-mt-20">
-        <p className="text-center font-body-md text-neutral-500">No hay productos que coincidan con la búsqueda: "{searchQuery}"</p>
+        <p className="text-center font-body-md text-neutral-500">No hay productos que coincidan con la busqueda: "{searchQuery}"</p>
       </section>
     );
   }
@@ -111,7 +99,7 @@ const ProductGrid = ({ searchQuery = '', onViewProduct }) => {
       aria-labelledby="collection-heading"
     >
       <h2 id="collection-heading" className="sr-only">
-        Colección MARA — {filtered.length} {filtered.length === 1 ? 'pieza' : 'piezas'} icónica{filtered.length !== 1 ? 's' : ''}
+        Coleccion MARA - {filtered.length} {filtered.length === 1 ? 'pieza' : 'piezas'}
       </h2>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-20 gap-x-6">

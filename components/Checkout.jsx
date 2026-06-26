@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { sanitizeCheckoutField, validateCheckoutForm } from '../src/lib/security';
 
 const INITIAL_FORM = {
   nombre: '',
@@ -17,14 +18,22 @@ const INITIAL_FORM = {
 
 const Checkout = ({ cartItems, total, processing, onBack, onSubmit }) => {
   const [form, setForm] = useState(INITIAL_FORM);
+  const [formError, setFormError] = useState('');
 
   const handleChange = (e) => {
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: sanitizeCheckoutField(name, value) }));
+    setFormError('');
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit(form);
+
+    try {
+      onSubmit(validateCheckoutForm(form));
+    } catch (err) {
+      setFormError(err.message);
+    }
   };
 
   return (
@@ -248,7 +257,7 @@ const Checkout = ({ cartItems, total, processing, onBack, onSubmit }) => {
                     <option value="CC">Cédula de Ciudadanía</option>
                     <option value="CE">Cédula de Extranjería</option>
                     <option value="NIT">NIT</option>
-                    <option value="Pasaporte">Pasaporte</option>
+                    <option value="PP">Pasaporte</option>
                   </select>
                 </div>
 
@@ -269,6 +278,12 @@ const Checkout = ({ cartItems, total, processing, onBack, onSubmit }) => {
                 </div>
               </div>
             </section>
+
+            {formError && (
+              <p role="alert" className="mb-4 font-body-md text-error">
+                {formError}
+              </p>
+            )}
 
             <button type="submit" disabled={processing} className="btn-primary w-full md:w-auto text-center disabled:opacity-40 disabled:pointer-events-none">
               {processing ? 'Procesando pago…' : 'Confirmar Pedido'}

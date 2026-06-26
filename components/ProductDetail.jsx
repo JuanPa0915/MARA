@@ -1,9 +1,9 @@
 import { useState } from 'react';
+import { normalizeCartItem } from '../src/lib/security';
 
 const ProductDetail = ({ product, onBack, onAddToCart, onGoToCheckout }) => {
   const [addedFeedback, setAddedFeedback] = useState(false);
-  const numericPrice = Number(product.price.replace(/[^0-9]/g, ''));
-  const cartItem = { id: product.id, name: product.name, price: numericPrice, imageUrl: product.imageUrl };
+  const cartItem = normalizeCartItem(product);
 
   const handleAddToCart = () => {
     onAddToCart(cartItem);
@@ -15,6 +15,8 @@ const ProductDetail = ({ product, onBack, onAddToCart, onGoToCheckout }) => {
     onAddToCart(cartItem);
     onGoToCheckout();
   };
+
+  const isOutOfStock = Number(product.stock ?? 0) === 0;
 
   return (
     <main className="min-h-screen pt-[80px]">
@@ -49,6 +51,13 @@ const ProductDetail = ({ product, onBack, onAddToCart, onGoToCheckout }) => {
               {product.price}
             </p>
 
+            {isOutOfStock && (
+              <p className="font-label-lg text-label-lg uppercase tracking-widest text-error mb-6 flex items-center gap-2">
+                <span className="material-symbols-outlined text-[20px]">block</span>
+                Producto Agotado
+              </p>
+            )}
+
             <p className="font-body-md text-on-surface-variant mb-10 leading-relaxed">
               Pieza artesanal de la colección MARA. Confeccionada con los mejores
               materiales y un acabado impecable que define el lujo silencioso.
@@ -57,18 +66,29 @@ const ProductDetail = ({ product, onBack, onAddToCart, onGoToCheckout }) => {
             </p>
 
             <div className="flex gap-4">
-              <button
-                onClick={handleAddToCart}
-                className="flex-1 border border-primary/40 px-8 py-3 font-label-lg text-label-lg uppercase tracking-widest transition-all duration-500 ease-in-out hover:border-primary text-center"
-              >
-                {addedFeedback ? '✓ Agregado' : 'Agregar al carrito'}
-              </button>
-              <button
-                onClick={handleBuy}
-                className="flex-1 btn-primary text-center"
-              >
-                Comprar
-              </button>
+              {isOutOfStock ? (
+                <button
+                  disabled
+                  className="flex-1 border border-neutral-300 px-8 py-3 font-label-lg text-label-lg uppercase tracking-widest text-neutral-400 cursor-not-allowed text-center"
+                >
+                  Agotado
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={handleAddToCart}
+                    className="flex-1 border border-primary/40 px-8 py-3 font-label-lg text-label-lg uppercase tracking-widest transition-all duration-500 ease-in-out hover:border-primary text-center"
+                  >
+                    {addedFeedback ? '✓ Agregado' : 'Agregar al carrito'}
+                  </button>
+                  <button
+                    onClick={handleBuy}
+                    className="flex-1 btn-primary text-center"
+                  >
+                    Comprar
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
