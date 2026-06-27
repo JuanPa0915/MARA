@@ -33,7 +33,36 @@ function countItems(items: Array<{ id: string | number }>) {
   }, new Map<string, number>())
 }
 
-async function calculateAmountFromCatalog(items: Array<{ id: string | number }>) {
+function getSupabaseAdmin() {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')?.trim()
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')?.trim()
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error('Supabase admin no configurado')
+  }
+
+  return createClient(supabaseUrl, serviceRoleKey)
+}
+
+// Si tu tabla se llama 'orders' en vez de 'pedidos', cambia .from('pedidos')
+// y ajusta las columnas (referencia_wompi, estado_pago) segun tu esquema.
+async function checkIdempotency(supabaseAdmin: ReturnType<typeof createClient>, reference: string) {
+  const { data: existingOrders, error } = await supabaseAdmin
+    .from('pedidos')
+    .select('id, estado_pago')
+    .eq('referencia_wompi', reference)
+    .in('estado_pago', ['APPROVED', 'PAID', 'pagado'])
+    .limit(1)
+
+  if (error) {
+    console.error('[wompi-signature] Error en consulta de idempotencia:', error)
+    throw new Error('Error al verificar estado de la orden')
+  }
+
+  return !(existingOrders && existingOrders.length > 0)
+}
+
+async function calculateAmountFromCatalog(supabaseAdmin: ReturnType<typeof createClient>, items: Array<{ id: string | number }>) {
   if (!Array.isArray(items) || items.length === 0) {
     throw new Error('Carrito invalido')
   }
@@ -43,14 +72,6 @@ async function calculateAmountFromCatalog(items: Array<{ id: string | number }>)
     throw new Error('Carrito invalido')
   }
 
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')?.trim()
-  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')?.trim()
-
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error('Supabase admin no configurado')
-  }
-
-  const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey)
   const { data, error } = await supabaseAdmin
     .from('productos')
     .select('id, precio, stock')
@@ -112,7 +133,14 @@ serve(async (req) => {
       return jsonResponse(req, { error: 'Moneda no soportada' }, 400)
     }
 
-    const catalogAmountInCents = await calculateAmountFromCatalog(items).catch((error) => {
+    const supabaseAdmin = getSupabaseAdmin()
+
+    const isNew = await checkIdempotency(supabaseAdmin, reference)
+    if (!isNew) {
+      return jsonResponse(req, { error: 'Esta referencia ya fue pagada y procesada' }, 400)
+    }
+
+    const catalogAmountInCents = await calculateAmountFromCatalog(supabaseAdmin, items).catch((error) => {
       console.error('[wompi-signature] Validacion de catalogo fallida:', error)
       return null
     })
