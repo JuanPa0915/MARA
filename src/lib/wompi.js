@@ -1,5 +1,5 @@
-const PUBLIC_KEY = import.meta.env.VITE_WOMPI_PUBLIC_KEY?.trim();
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL?.trim();
+const PUBLIC_KEY = 'pub_test_5IPvWCz2MYDLETA0v3Ssh6X7WMM5CvMV';
+const SUPABASE_URL = 'https://uxoltcjvvkicrzewtdab.supabase.co';
 const ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim();
 const WOMPI_WIDGET_URL = 'https://checkout.wompi.co/widget.js';
 
