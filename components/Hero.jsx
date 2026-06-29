@@ -17,17 +17,9 @@ const Hero = () => (
     {/* ── Foreground content ── */}
     <div className="relative z-10 w-full max-w-[1440px] mx-auto px-5 md:px-[80px]">
       <div className="max-w-2xl">
-        {/* Display headline — Bodoni Moda, 64 px desktop / 32 px mobile */}
-        <h1
-          className="font-display-lg text-headline-lg-mobile md:text-display-lg
-                     text-stone-900 mb-8 tracking-tight"
-        >
-          DISEÑADA PARA DESTACAR
-        </h1>
-
         <a
           href="#collection"
-          className="inline-block border-2 border-stone-900 text-stone-900
+          className="inline-block mt-16 border-2 border-stone-900 text-stone-900
                      px-10 py-4
                      font-label-lg text-label-lg
                      uppercase tracking-widest
