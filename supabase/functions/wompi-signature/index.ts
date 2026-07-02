@@ -1,4 +1,3 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
 function buildCorsHeaders(req: Request) {
@@ -44,9 +43,7 @@ function getSupabaseAdmin() {
   return createClient(supabaseUrl, serviceRoleKey)
 }
 
-// Si tu tabla se llama 'orders' en vez de 'pedidos', cambia .from('pedidos')
-// y ajusta las columnas (referencia_wompi, estado_pago) segun tu esquema.
-async function checkIdempotency(supabaseAdmin: ReturnType<typeof createClient>, reference: string) {
+async function checkIdempotency(supabaseAdmin: any, reference: string) {
   const { data: existingOrders, error } = await supabaseAdmin
     .from('pedidos')
     .select('id, estado_pago')
@@ -62,7 +59,7 @@ async function checkIdempotency(supabaseAdmin: ReturnType<typeof createClient>, 
   return !(existingOrders && existingOrders.length > 0)
 }
 
-async function calculateAmountFromCatalog(supabaseAdmin: ReturnType<typeof createClient>, items: Array<{ id: string | number }>) {
+async function calculateAmountFromCatalog(supabaseAdmin: any, items: Array<{ id: string | number }>) {
   if (!Array.isArray(items) || items.length === 0) {
     throw new Error('Carrito invalido')
   }
@@ -79,7 +76,8 @@ async function calculateAmountFromCatalog(supabaseAdmin: ReturnType<typeof creat
 
   if (error) throw error
 
-  const productsById = new Map((data ?? []).map((product) => [String(product.id), product]))
+  const products = (data ?? []) as Array<Record<string, unknown>>
+  const productsById = new Map(products.map((product) => [String(product.id), product]))
   let total = 0
 
   for (const [id, quantity] of counts) {
@@ -101,7 +99,7 @@ async function calculateAmountFromCatalog(supabaseAdmin: ReturnType<typeof creat
   return total * 100
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: buildCorsHeaders(req) })
   }
