@@ -203,25 +203,43 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
       const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
-      const { error: updateError } = await supabaseAdmin
+      const referenciaWompi = (transaction?.reference as string) ?? "";
+
+      console.log(
+        `[wompi-webhook] Intentando actualizar. ID: ${id}, Referencia: ${referenciaWompi}`
+      );
+
+      // Intento 1: Buscar por transaccion_id
+      let resultado = await supabaseAdmin
         .from("pedidos")
         .update({ estado_pago: "APROBADO" })
         .eq("transaccion_id", id);
 
-      if (updateError) {
+      // Intento 2: También buscamos por referencia_wompi por si el frontend guardó ese campo
+      if (!resultado.error) {
+        const resultadoRef = await supabaseAdmin
+          .from("pedidos")
+          .update({ estado_pago: "APROBADO" })
+          .eq("referencia_wompi", referenciaWompi);
+
+        if (resultadoRef.error) {
+          console.error(
+            "[wompi-webhook] ❌ Error al buscar por referencia_wompi:",
+            resultadoRef.error
+          );
+        }
+      }
+
+      if (resultado.error) {
         console.error(
-          "[wompi-webhook] Error actualizando pedidos:",
-          updateError
+          "[wompi-webhook] ❌ Error en Supabase al actualizar pedidos:",
+          resultado.error
         );
-        return jsonResponse(
-          req,
-          { error: "Error al actualizar pedidos" },
-          500
-        );
+        throw resultado.error;
       }
 
       console.log(
-        `[wompi-webhook] Pedido ${id} actualizado a APROBADO`
+        `[wompi-webhook] 🚀 ¡Proceso de actualización completado para el pedido! Checkea tu tabla.`
       );
     }
 
