@@ -193,54 +193,55 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
     if (status === "APPROVED") {
       const supabaseUrl = Deno.env.get("SUPABASE_URL")?.trim();
-      const serviceRoleKey = Deno.env
-        .get("SUPABASE_SERVICE_ROLE_KEY")
-        ?.trim();
-
-      if (!supabaseUrl || !serviceRoleKey) {
-        throw new Error("Supabase admin no configurado");
-      }
+      const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")?.trim();
+      if (!supabaseUrl || !serviceRoleKey) throw new Error("Supabase admin no configurado");
 
       const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
-
       const referenciaWompi = (transaction?.reference as string) ?? "";
 
-      console.log(
-        `[wompi-webhook] Intentando actualizar. ID: ${id}, Referencia: ${referenciaWompi}`
-      );
+      console.log(`[wompi-webhook] Intentando actualizar. ID: ${id}, Referencia: ${referenciaWompi}`);
 
-      // Intento 1: Buscar por transaccion_id
+      // Variables para almacenar los resultados con los datos devuelvos (.select)
       let resultado = await supabaseAdmin
         .from("pedidos")
         .update({ estado_pago: "APROBADO" })
-        .eq("transaccion_id", id);
+        .eq("transaccion_id", id)
+        .select("producto_id"); // 1. Traemos el id del bolso
 
-      // Intento 2: También buscamos por referencia_wompi por si el frontend guardó ese campo
+      let resultadoRef = null;
+
+      // Intento 2: Búsqueda dual por referencia_wompi
       if (!resultado.error) {
-        const resultadoRef = await supabaseAdmin
+        resultadoRef = await supabaseAdmin
           .from("pedidos")
           .update({ estado_pago: "APROBADO" })
-          .eq("referencia_wompi", referenciaWompi);
+          .eq("referencia_wompi", referenciaWompi)
+          .select("producto_id"); // 1. Traemos el id del bolso si actualiza por acá
+      }
 
-        if (resultadoRef.error) {
-          console.error(
-            "[wompi-webhook] ❌ Error al buscar por referencia_wompi:",
-            resultadoRef.error
-          );
+      if (resultado.error) throw resultado.error;
+
+      // 3. Bloque nuevo: Extraer el producto_id de cualquiera de los dos intentos exitosos
+      const pedidoActualizado = resultado.data?.[0] ?? resultadoRef?.data?.[0];
+      const productoId = pedidoActualizado?.producto_id;
+
+      if (productoId) {
+        console.log(`[wompi-webhook] 📉 Bajando stock a 0 para el producto_id: ${productoId}`);
+        const { error: errorStock } = await supabaseAdmin
+          .from("productos")
+          .update({ stock: 0 })
+          .eq("id", productoId);
+
+        if (errorStock) {
+          console.error("[wompi-webhook] ❌ Error al actualizar el stock del producto:", errorStock);
+        } else {
+          console.log("[wompi-webhook] ✅ Stock del producto actualizado a 0 de forma exitosa.");
         }
+      } else {
+        console.warn("[wompi-webhook] ⚠️ No se encontró producto_id para actualizar el stock.");
       }
 
-      if (resultado.error) {
-        console.error(
-          "[wompi-webhook] ❌ Error en Supabase al actualizar pedidos:",
-          resultado.error
-        );
-        throw resultado.error;
-      }
-
-      console.log(
-        `[wompi-webhook] 🚀 ¡Proceso de actualización completado para el pedido! Checkea tu tabla.`
-      );
+      console.log(`[wompi-webhook] 🚀 ¡Proceso de actualización completado para el pedido! Checkea tu tabla.`);
     }
 
     return jsonResponse(req, { received: true });

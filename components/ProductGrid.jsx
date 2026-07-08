@@ -19,7 +19,8 @@ const ProductGrid = ({ searchQuery = '', onViewProduct }) => {
         const { data, error: supabaseError } = await supabase
           .from('productos')
           .select('*')
-          .gt('stock', 0);
+          .gte('stock', 0)
+          .order('created_at', { ascending: false });
 
         if (cancelled) return;
 
@@ -110,6 +111,7 @@ const ProductGrid = ({ searchQuery = '', onViewProduct }) => {
             price={product.price}
             imageUrl={product.imageUrl}
             alt={product.alt}
+            stock={product.stock}
             onClick={() => onViewProduct(product)}
           />
         ))}
