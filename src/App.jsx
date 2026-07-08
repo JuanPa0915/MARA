@@ -126,47 +126,12 @@ function App() {
       }
 
       if (transaction.status === 'APPROVED') {
-        const { error: updateError } = await supabase
-          .from('pedidos')
-          .update({ estado_pago: 'pagado', transaccion_id: transaction.id })
-          .eq('referencia_wompi', reference);
-
-        if (updateError) throw updateError;
-
-        for (const item of verifiedItems) {
-          try {
-            const { data: producto, error: stockReadError } = await supabase
-              .from('productos')
-              .select('stock')
-              .eq('id', item.id)
-              .single();
-
-            if (stockReadError) throw stockReadError;
-
-            if (producto && producto.stock > 0) {
-              const { error: decrementError } = await supabase
-                .from('productos')
-                .update({ stock: producto.stock - 1 })
-                .eq('id', item.id);
-
-              if (decrementError) throw decrementError;
-            }
-          } catch (stockError) {
-            console.error('[stock] Error al descontar stock:', stockError);
-          }
-        }
-
         showSuccess('Pedido confirmado', `${sanitizedForm.nombre}, tu pedido ha sido confirmado. Te enviaremos la guia de rastreo a ${sanitizedForm.email}.`);
         setCartItems([]);
         setShowCheckout(false);
       } else if (transaction.status === 'CANCELLED') {
         console.log('[Checkout] Usuario cerró el widget sin completar el pago.')
       } else {
-        await supabase
-          .from('pedidos')
-          .update({ estado_pago: 'rechazado' })
-          .eq('referencia_wompi', reference);
-
         showError('Pago no aprobado', 'El pago no fue aprobado. Puedes intentar de nuevo cuando quieras.');
       }
     } catch (error) {

@@ -30,7 +30,7 @@ function jsonResponse(
   });
 }
 
-async function generarHashSHA256(cadena: string): Promise<string> {
+async function sha256(cadena: string): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(cadena);
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
@@ -44,15 +44,17 @@ async function verifyEventSignature(
 ): Promise<boolean> {
   const signature = body.signature as Record<string, unknown> | undefined;
   const checksum = String(signature?.checksum ?? "").trim();
+
+  if (!checksum) {
+    console.warn("[wompi-webhook] Payload sin signature.checksum");
+    return false;
+  }
+
   const data = body.data as Record<string, unknown> | undefined;
   const transaction = data?.transaction as Record<string, unknown> | undefined;
 
-  console.log("[wompi-webhook] === RADIOGRAFIA DE LA FIRMA ===");
-  console.log("[wompi-webhook] Checksum recibido:", checksum);
-  console.log("[wompi-webhook] Timestamp raiz:", body.timestamp);
-
-  if (!checksum || !transaction) {
-    console.warn("[wompi-webhook] Payload sin checksum o sin data.transaction");
+  if (!transaction) {
+    console.warn("[wompi-webhook] Payload sin data.transaction");
     return false;
   }
 
@@ -61,79 +63,23 @@ async function verifyEventSignature(
   const amount = String(transaction.amount_in_cents ?? "");
   const timestampRaiz = body.timestamp ? String(body.timestamp) : "";
 
-  // Combinacion A: id + status + amount + rootTimestamp + secret
-  const cadenaA = `${id}${status}${amount}${timestampRaiz}${eventsSecret}`;
-  const hashA = await generarHashSHA256(cadenaA);
-
-  // Combinacion B: id + status + amount + secret (sin timestamp)
-  const cadenaB = `${id}${status}${amount}${eventsSecret}`;
-  const hashB = await generarHashSHA256(cadenaB);
-
-  // Combinacion C: id + status + amount + created_at (unix) + secret
-  let hashC = "";
-  let cadenaC = "";
-  const createdAt = transaction.created_at;
-  if (createdAt) {
-    const tsTransaccion = String(new Date(String(createdAt)).getTime()).substring(0, 10);
-    cadenaC = `${id}${status}${amount}${tsTransaccion}${eventsSecret}`;
-    hashC = await generarHashSHA256(cadenaC);
+  if (!id || !status) {
+    console.warn("[wompi-webhook] transaction.id o transaction.status vacios");
+    return false;
   }
-
-  // Combinacion D: id + amount + status + secret (orden alternativo usado en Sandbox)
-  const cadenaD = `${id}${amount}${status}${eventsSecret}`;
-  const hashD = await generarHashSHA256(cadenaD);
-
-  // Combinacion E: timestampRaiz + id + status + amount + secret (timestamp al inicio)
-  const cadenaE = `${timestampRaiz}${id}${status}${amount}${eventsSecret}`;
-  const hashE = await generarHashSHA256(cadenaE);
 
   const checksumLower = checksum.toLowerCase();
-  const hashALower = hashA.toLowerCase();
-  const hashBLower = hashB.toLowerCase();
-  const hashCLower = hashC.toLowerCase();
-  const hashDLower = hashD.toLowerCase();
-  const hashELower = hashE.toLowerCase();
 
-  const isValid =
-    hashALower === checksumLower ||
-    hashBLower === checksumLower ||
-    (hashC !== "" && hashCLower === checksumLower) ||
-    hashDLower === checksumLower ||
-    hashELower === checksumLower;
+  // Estandar Wompi: SHA-256(id + status + amount + timestamp + secret)
+  const hashEstandar = await sha256(`${id}${status}${amount}${timestampRaiz}${eventsSecret}`);
+  if (hashEstandar === checksumLower) return true;
 
-  const secretPreview =
-    eventsSecret.length > 8
-      ? eventsSecret.slice(0, 4) + "..." + eventsSecret.slice(-4) + ` (len: ${eventsSecret.length})`
-      : `"${eventsSecret}" (len: ${eventsSecret.length})`;
+  // Fallback (versiones previas de Wompi sin timestamp): SHA-256(id + status + amount + secret)
+  const hashFallback = await sha256(`${id}${status}${amount}${eventsSecret}`);
+  if (hashFallback === checksumLower) return true;
 
-  console.log("[wompi-webhook] === VERIFICACION DE FIRMA ===");
-  console.log(`[wompi-webhook]   transaction.id: "${id}"`);
-  console.log(`[wompi-webhook]   transaction.status: "${status}"`);
-  console.log(`[wompi-webhook]   transaction.amount_in_cents: "${amount}"`);
-  console.log(`[wompi-webhook]   timestamp raiz: "${timestampRaiz}"`);
-  console.log(`[wompi-webhook]   transaction.created_at: "${createdAt ?? ""}"`);
-  console.log("[wompi-webhook] Secreto usado:", secretPreview);
-  console.log("[wompi-webhook] Combinacion A (id+status+amount+ts+secret):");
-  console.log("[wompi-webhook]   Cadena:", cadenaA);
-  console.log("[wompi-webhook]   SHA-256:", hashALower);
-  console.log("[wompi-webhook] Combinacion B (id+status+amount+secret):");
-  console.log("[wompi-webhook]   Cadena:", cadenaB);
-  console.log("[wompi-webhook]   SHA-256:", hashBLower);
-  if (hashC) {
-    console.log("[wompi-webhook] Combinacion C (id+status+amount+created_at+secret):");
-    console.log("[wompi-webhook]   Cadena:", cadenaC);
-    console.log("[wompi-webhook]   SHA-256:", hashCLower);
-  }
-  console.log("[wompi-webhook] Combinacion D (id+amount+status+secret):");
-  console.log("[wompi-webhook]   Cadena:", cadenaD);
-  console.log("[wompi-webhook]   SHA-256:", hashDLower);
-  console.log("[wompi-webhook] Combinacion E (ts+id+status+amount+secret):");
-  console.log("[wompi-webhook]   Cadena:", cadenaE);
-  console.log("[wompi-webhook]   SHA-256:", hashELower);
-  console.log("[wompi-webhook] Checksum esperado:", checksumLower);
-  console.log("[wompi-webhook] Firma valida:", isValid);
-
-  return isValid;
+  console.error("[wompi-webhook] FIRMA INVALIDA — ninguna combinacion coincide");
+  return false;
 }
 
 Deno.serve(async (req: Request): Promise<Response> => {
@@ -162,86 +108,97 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
 
     const eventBody = body as Record<string, unknown>;
-
-    console.log("[wompi-webhook] Event recibido:", (eventBody as Record<string, unknown>).event ?? "desconocido");
-
     const data = eventBody.data as Record<string, unknown> | undefined;
     const transaction = data?.transaction as Record<string, unknown> | undefined;
     const id = String(transaction?.id ?? "").trim();
     const status = String(transaction?.status ?? "").trim();
 
     console.log(
-      `[wompi-webhook] Transaccion ${id}, estado: ${status}`
+      `[wompi-webhook] Evento recibido: ${String(eventBody.event ?? "desconocido")}, transaccion ${id}, estado: ${status}`
     );
 
+    // ─── VALIDACION ESTRICTA DE FIRMA ───────────────────────────────
     const isValid = await verifyEventSignature(eventBody, eventsSecret);
 
-    // 🚨 HACK DE EMERGENCIA PARA SANDBOX: bypass si es APPROVED aunque falle firma
-    const modoPruebasYAprobado =
-      eventBody.event === "transaction.updated" && status === "APPROVED";
-
-    if (!isValid && !modoPruebasYAprobado) {
-      console.warn("[wompi-webhook] Firma de evento invalida");
+    if (!isValid) {
+      console.error("[wompi-webhook] Firma invalida — rechazando evento");
       return jsonResponse(req, { error: "Firma invalida" }, 401);
     }
 
-    if (isValid) {
-      console.log("[wompi-webhook] Firma verificada exitosamente");
-    } else {
-      console.log("[wompi-webhook] BYPASS SANDBOX: se continua pese a firma invalida");
-    }
+    console.log("[wompi-webhook] Firma verificada exitosamente");
 
+    // ─── PROCESAR SOLO TRANSACCIONES APROBADAS ─────────────────────
     if (status === "APPROVED") {
       const supabaseUrl = Deno.env.get("SUPABASE_URL")?.trim();
       const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")?.trim();
-      if (!supabaseUrl || !serviceRoleKey) throw new Error("Supabase admin no configurado");
+      if (!supabaseUrl || !serviceRoleKey) {
+        throw new Error("Supabase admin no configurado");
+      }
 
       const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
       const referenciaWompi = (transaction?.reference as string) ?? "";
+      const transaccionId = transaction?.id ?? "";
 
-      console.log(`[wompi-webhook] Intentando actualizar. ID: ${id}, Referencia: ${referenciaWompi}`);
+      console.log(`[wompi-webhook] Procesando transaccion ${transaccionId}, referencia: ${referenciaWompi}`);
 
-      // Variables para almacenar los resultados con los datos devuelvos (.select)
-      let resultado = await supabaseAdmin
+      // Buscar el pedido por transaccion_id o referencia_wompi
+      const { data: pedido } = await supabaseAdmin
         .from("pedidos")
-        .update({ estado_pago: "APROBADO" })
-        .eq("transaccion_id", id)
-        .select("producto_id"); // 1. Traemos el id del bolso
+        .select("id, producto_id, estado_pago")
+        .or(`transaccion_id.eq.${transaccionId},referencia_wompi.eq.${referenciaWompi}`)
+        .limit(1)
+        .single();
 
-      let resultadoRef = null;
-
-      // Intento 2: Búsqueda dual por referencia_wompi
-      if (!resultado.error) {
-        resultadoRef = await supabaseAdmin
-          .from("pedidos")
-          .update({ estado_pago: "APROBADO" })
-          .eq("referencia_wompi", referenciaWompi)
-          .select("producto_id"); // 1. Traemos el id del bolso si actualiza por acá
+      if (!pedido) {
+        console.warn(`[wompi-webhook] No se encontro pedido para transaccion ${transaccionId}`);
+        return jsonResponse(req, { received: true });
       }
 
-      if (resultado.error) throw resultado.error;
+      if (pedido.estado_pago === "APROBADO" || pedido.estado_pago === "pagado") {
+        console.log(`[wompi-webhook] Pedido ${pedido.id} ya fue procesado — omitiendo`);
+        return jsonResponse(req, { received: true });
+      }
 
-      // 3. Bloque nuevo: Extraer el producto_id de cualquiera de los dos intentos exitosos
-      const pedidoActualizado = resultado.data?.[0] ?? resultadoRef?.data?.[0];
-      const productoId = pedidoActualizado?.producto_id;
+      const { error: updateError } = await supabaseAdmin
+        .from("pedidos")
+        .update({
+          estado_pago: "APROBADO",
+          transaccion_id: transaccionId,
+        })
+        .eq("id", pedido.id);
 
-      if (productoId) {
-        console.log(`[wompi-webhook] 📉 Bajando stock a 0 para el producto_id: ${productoId}`);
-        const { error: errorStock } = await supabaseAdmin
+      if (updateError) {
+        console.error("[wompi-webhook] Error al actualizar pedido:", updateError);
+        throw updateError;
+      }
+
+      console.log(`[wompi-webhook] Pedido ${pedido.id} actualizado a APROBADO`);
+
+      // Decrementar stock correctamente
+      if (pedido.producto_id) {
+        const { data: producto, error: readError } = await supabaseAdmin
           .from("productos")
-          .update({ stock: 0 })
-          .eq("id", productoId);
+          .select("stock")
+          .eq("id", pedido.producto_id)
+          .single();
 
-        if (errorStock) {
-          console.error("[wompi-webhook] ❌ Error al actualizar el stock del producto:", errorStock);
+        if (readError) {
+          console.error("[wompi-webhook] Error al leer stock:", readError);
+        } else if (producto && Number(producto.stock) > 0) {
+          const { error: decrementError } = await supabaseAdmin
+            .from("productos")
+            .update({ stock: Number(producto.stock) - 1 })
+            .eq("id", pedido.producto_id);
+
+          if (decrementError) {
+            console.error("[wompi-webhook] Error al decrementar stock:", decrementError);
+          } else {
+            console.log(`[wompi-webhook] Stock de producto ${pedido.producto_id} decrementado exitosamente`);
+          }
         } else {
-          console.log("[wompi-webhook] ✅ Stock del producto actualizado a 0 de forma exitosa.");
+          console.warn(`[wompi-webhook] Producto ${pedido.producto_id} sin stock disponible`);
         }
-      } else {
-        console.warn("[wompi-webhook] ⚠️ No se encontró producto_id para actualizar el stock.");
       }
-
-      console.log(`[wompi-webhook] 🚀 ¡Proceso de actualización completado para el pedido! Checkea tu tabla.`);
     }
 
     return jsonResponse(req, { received: true });

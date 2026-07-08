@@ -163,7 +163,7 @@ Deno.serve(async (req) => {
       .map((byte) => byte.toString(16).padStart(2, '0'))
       .join('')
 
-    return jsonResponse(req, { signature, amountInCents: catalogAmountInCents })
+    return jsonResponse(req, { signature })
   } catch (error) {
     console.error('[wompi-signature] Error inesperado:', error)
     return jsonResponse(req, { error: 'Error inesperado en el servidor' }, 500)
