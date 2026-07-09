@@ -16,19 +16,6 @@ const Hero = () => (
 
     {/* ── Foreground content ── */}
     <div className="relative z-10 w-full max-w-[1440px] mx-auto px-5 md:px-[80px]">
-      <div className="max-w-2xl">
-        <a
-          href="#collection"
-          className="inline-block mt-16 border-2 border-stone-900 text-stone-900
-                     px-10 py-4
-                     font-label-lg text-label-lg
-                     uppercase tracking-widest
-                     hover:bg-stone-900 hover:text-stone-100
-                     transition-all duration-500"
-        >
-          Descubre la Colección
-        </a>
-      </div>
     </div>
   </section>
 );
