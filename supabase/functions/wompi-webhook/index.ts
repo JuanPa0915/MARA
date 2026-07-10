@@ -190,6 +190,53 @@ Deno.serve(async (req: Request): Promise<Response> => {
           console.warn(`[wompi-webhook] Producto ${pedido.producto_id} sin stock disponible`);
         }
       }
+
+      // ─── NOTIFICACION POR CORREO (RESEND) ──────────────────────────
+      try {
+        const resendApiKey = Deno.env.get("RESEND_API_KEY")?.trim();
+        if (!resendApiKey) {
+          console.warn("[wompi-webhook] RESEND_API_KEY no configurado — omitiendo notificacion");
+        } else {
+          const monto = (Number(transaction?.amount_in_cents ?? 0) / 100).toLocaleString("es-CO", {
+            style: "currency",
+            currency: "COP",
+          });
+
+          const emailPayload = {
+            from: "Ventas MARA <onboarding@resend.dev>",
+            to: ["juan.aristizabalde@gmail.com"],
+            subject: "¡Nueva Venta Aprobada en MARA! 👜",
+            html: `<div style="font-family:sans-serif;padding:20px;max-width:600px;margin:0 auto;">
+              <h2 style="color:#4f46e5;">¡Venta Aprobada! ✅</h2>
+              <p>Se ha aprobado un pago en MARA.</p>
+              <table style="border-collapse:collapse;width:100%;margin-top:16px;">
+                <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">ID Transaccion</td><td style="padding:8px;border:1px solid #ddd;">${transaccionId}</td></tr>
+                <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">Referencia</td><td style="padding:8px;border:1px solid #ddd;">${referenciaWompi}</td></tr>
+                <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">Monto</td><td style="padding:8px;border:1px solid #ddd;">${monto}</td></tr>
+              </table>
+              <p style="margin-top:20px;color:#6b7280;font-size:14px;">Este es un mensaje automatico del sistema de pagos MARA.</p>
+            </div>`,
+          };
+
+          const res = await fetch("https://api.resend.com/emails", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${resendApiKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(emailPayload),
+          });
+
+          if (res.ok) {
+            console.log(`[wompi-webhook] Correo enviado para transaccion ${transaccionId}`);
+          } else {
+            const errBody = await res.text();
+            console.error(`[wompi-webhook] Error de Resend (${res.status}): ${errBody}`);
+          }
+        }
+      } catch (emailError) {
+        console.error("[wompi-webhook] Error al enviar correo:", emailError);
+      }
     }
 
     return jsonResponse(req, { received: true });
