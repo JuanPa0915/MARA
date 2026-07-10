@@ -23,13 +23,13 @@ const BrandStatement = () => (
         id="brand-philosophy-heading"
         className="font-headline-lg text-headline-lg mb-8 italic"
       >
-        Artesanía en cada silueta
+        Diseñados para destacar
       </h2>
 
       <p className="font-body-lg text-body-lg text-on-surface-variant leading-relaxed">
-        En MARA creemos que el lujo verdadero no se encuentra en el ruido, sino en la
-        precisión silenciosa de una costura perfecta. Cada pieza es esculpida a mano por
-        maestros artesanos, fusionando formas arquitectónicas con los cueros más nobles del mundo.
+        Buscamos la perfección en la sutileza. Siluetas estructuradas que cobran vida a
+        través de materiales exclusivos y acabados impecables, diseñadas para complementar
+        tu identidad sin necesidad de explicaciones.
       </p>
 
       {/* Bottom divider */}

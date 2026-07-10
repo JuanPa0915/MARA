@@ -1,17 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-function buildCorsHeaders(req: Request): Record<string, string> {
-  const allowedOrigin = Deno.env.get("ALLOWED_ORIGIN")?.trim();
-  const origin = req.headers.get("origin") ?? "";
-  const responseOrigin =
-    allowedOrigin && origin === allowedOrigin
-      ? origin
-      : allowedOrigin
-      ? "null"
-      : "*";
-
+function buildCorsHeaders(_req: Request): Record<string, string> {
   return {
-    "Access-Control-Allow-Origin": responseOrigin,
+    "Access-Control-Allow-Origin": "https://mara-bags.com",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Allow-Headers":
       "authorization, x-client-info, apikey, content-type",
