@@ -59,10 +59,7 @@ const ProductDetail = ({ product, onBack, onAddToCart, onGoToCheckout }) => {
             )}
 
             <p className="font-body-md text-on-surface-variant mb-10 leading-relaxed">
-              Pieza artesanal de la colección MARA. Confeccionada con los mejores
-              materiales y un acabado impecable que define el lujo silencioso.
-              Cada pieza es única, cuidadosamente elaborada por artesanos
-              mexicanos con técnicas tradicionales transmitidas por generaciones.
+              {product.descripcion}
             </p>
 
             <div className="flex gap-4">
